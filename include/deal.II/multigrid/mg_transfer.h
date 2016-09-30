@@ -543,6 +543,7 @@ private:
    * Sparsity patterns for transfer matrices.
    */
   std::vector<std_cxx11::shared_ptr<typename internal::MatrixSelector<VectorType>::Sparsity> > prolongation_sparsities;
+  std::vector<std_cxx11::shared_ptr<typename internal::MatrixSelector<VectorType>::Sparsity> > restriction_sparsities;
 
   /**
    * The actual prolongation matrix.  column indices belong to the dof indices
@@ -550,6 +551,7 @@ private:
    * the child cell, i.e. the fine level.
    */
   std::vector<std_cxx11::shared_ptr<typename internal::MatrixSelector<VectorType>::Matrix> > prolongation_matrices;
+  std::vector<std_cxx11::shared_ptr<typename internal::MatrixSelector<VectorType>::Matrix> > restriction_matrices;
 
   /**
    * Degrees of freedom on the refinement edge excluding those on the
