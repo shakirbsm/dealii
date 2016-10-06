@@ -122,7 +122,7 @@ void MGTransferPrebuilt<VectorType>::restrict_and_add (const unsigned int from_l
           ExcIndexRange (from_level, 1, restriction_matrices.size()+1));
   (void)from_level;
 
-  restriction_matrices[from_level-1]->Tvmult_add (dst, src);
+  restriction_matrices[from_level-1]->vmult_add (dst, src);
 }
 
 
@@ -189,14 +189,17 @@ void MGTransferPrebuilt<VectorType>::build_matrices
       // increment dofs_per_cell since a useless diagonal element will be
       // stored
       IndexSet level_p1_relevant_dofs;
+      IndexSet level_p_relevant_dofs;
       DoFTools::extract_locally_relevant_level_dofs(mg_dof, level+1,
                                                     level_p1_relevant_dofs);
+      DoFTools::extract_locally_relevant_level_dofs(mg_dof, level,
+                                                    level_p_relevant_dofs);
       DynamicSparsityPattern dsp (this->sizes[level+1],
                                   this->sizes[level],
                                   level_p1_relevant_dofs);
-      DynamicSparsityPattern dsp_r (this->sizes[level+1],
-                                  this->sizes[level],
-                                  level_p1_relevant_dofs);
+      DynamicSparsityPattern dsp_r (this->sizes[level],
+                                  this->sizes[level+1],
+                                  level_p_relevant_dofs);
       typename DoFHandler<dim>::cell_iterator cell, endc = mg_dof.end(level);
       for (cell=mg_dof.begin(level); cell != endc; ++cell)
         if (cell->has_children() &&
@@ -234,11 +237,11 @@ void MGTransferPrebuilt<VectorType>::build_matrices
                         if (prolongation(i,j) != 0)
                         entries.push_back (dof_indices_parent[j]);
                         if (restriction(i,j) != 0)
-                        entries_r.push_back (dof_indices_parent[j]);
+                        entries_r.push_back (dof_indices_child[j]);
                       }
                     dsp.add_entries (dof_indices_child[i],
                                      entries.begin(), entries.end());
-                    dsp_r.add_entries (dof_indices_child[i],
+                    dsp_r.add_entries (dof_indices_parent[i],
                                      entries_r.begin(), entries_r.end());
                   }
               }
@@ -301,9 +304,9 @@ void MGTransferPrebuilt<VectorType>::build_matrices
                                                      &dof_indices_parent[0],
                                                      &prolongation(i,0),
                                                      true);
-                  restriction_matrices[level]->set (dof_indices_child[i],
+                  restriction_matrices[level]->set (dof_indices_parent[i],
                                                      dofs_per_cell,
-                                                     &dof_indices_parent[0],
+                                                     &dof_indices_child[0],
                                                      &restriction(i,0),
                                                      true);
                   }
