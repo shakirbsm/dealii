@@ -24,6 +24,7 @@ SET(_src
   mg_transfer_matrix_free.cc
   mg_transfer_prebuilt.cc
   multigrid.cc
+  mg_transfer_solution.cc
   )
 
 SET(_inst
@@ -35,6 +36,7 @@ SET(_inst
   mg_transfer_matrix_free.inst.in
   mg_transfer_prebuilt.inst.in
   multigrid.inst.in
+  mg_transfer_solution.inst.in
   )
 
 FILE(GLOB _header
