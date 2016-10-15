@@ -560,6 +560,149 @@ private:
   std::vector<std::vector<bool> > interface_dofs;
 };
 
+/**
+ * Implementation of the MGTransferBase interface for which the transfer
+ * operations are prebuilt upon construction of the object of this class as
+ * matrices. This is the fast way, since it only needs to build the operation
+ * once by looping over all cells and storing the result in a matrix for each
+ * level, but requires additional memory.
+ *
+ * See MGTransferBase to find out which of the transfer classes is best for
+ * your needs.
+ *
+ * @author Wolfgang Bangerth, Guido Kanschat, Timo Heister, Martin Kronbichler, Noman Shakir
+ * @date 1999, 2000, 2001, 2002, 2003, 2004, 2012, 2015, 2016
+ */
+template <typename VectorType>
+class MGTransferSolution : public MGLevelGlobalTransfer<VectorType>
+{
+public:
+  /**
+   * Constructor without constraint matrices. Use this constructor only with
+   * discontinuous finite elements or with no local refinement.
+   */
+  MGTransferSolution ();
+
+  /**
+   * Constructor with constraints. Equivalent to the default constructor
+   * followed by initialize_constraints().
+   */
+  MGTransferSolution (const MGConstrainedDoFs &mg_constrained_dofs);
+
+  /**
+   * Constructor with constraints. Equivalent to the default constructor
+   * followed by initialize_constraints().
+   *
+   * @deprecated @p constraints is unused.
+   */
+  MGTransferSolution (const ConstraintMatrix &constraints,
+                      const MGConstrainedDoFs &mg_constrained_dofs) DEAL_II_DEPRECATED;
+
+  /**
+   * Destructor.
+   */
+  virtual ~MGTransferSolution ();
+
+  /**
+   * Initialize the constraints to be used in build_matrices().
+   */
+  void initialize_constraints (const MGConstrainedDoFs &mg_constrained_dofs);
+
+  /**
+   * Initialize the constraints to be used in build_matrices().
+   *
+   * @deprecated @p constraints is unused.
+   */
+  void initialize_constraints (const ConstraintMatrix &constraints,
+                               const MGConstrainedDoFs &mg_constrained_dofs) DEAL_II_DEPRECATED;
+
+  /**
+   * Reset the object to the state it had right after the default constructor.
+   */
+  void clear ();
+
+  /**
+   * Actually build the prolongation matrices for each level.
+   */
+  template <int dim, int spacedim>
+  void build_matrices (const DoFHandler<dim,spacedim> &mg_dof);
+
+  /**
+   * Prolongate a vector from level <tt>to_level-1</tt> to level
+   * <tt>to_level</tt> using the embedding matrices of the underlying finite
+   * element. The previous content of <tt>dst</tt> is overwritten.
+   *
+   * @arg src is a vector with as many elements as there are degrees of
+   * freedom on the coarser level involved.
+   *
+   * @arg dst has as many elements as there are degrees of freedom on the
+   * finer level.
+   */
+  virtual void prolongate (const unsigned int to_level,
+                           VectorType         &dst,
+                           const VectorType   &src) const;
+
+  /**
+   * Restrict a vector from level <tt>from_level</tt> to level
+   * <tt>from_level-1</tt> using the transpose operation of the @p prolongate
+   * method. If the region covered by cells on level <tt>from_level</tt> is
+   * smaller than that of level <tt>from_level-1</tt> (local refinement), then
+   * some degrees of freedom in <tt>dst</tt> are active and will not be
+   * altered. For the other degrees of freedom, the result of the restriction
+   * is added.
+   *
+   * @arg src is a vector with as many elements as there are degrees of
+   * freedom on the finer level involved.
+   *
+   * @arg dst has as many elements as there are degrees of freedom on the
+   * coarser level.
+   */
+  virtual void restrict_and_add (const unsigned int from_level,
+                                 VectorType         &dst,
+                                 const VectorType   &src) const;
+
+  /**
+   * Finite element does not provide prolongation matrices.
+   */
+  DeclException0(ExcNoProlongation);
+
+  /**
+   * You have to call build_matrices() before using this object.
+   */
+  DeclException0(ExcMatricesNotBuilt);
+
+  /**
+   * Memory used by this object.
+   */
+  std::size_t memory_consumption () const;
+
+  /**
+   * Print all the matrices for debugging purposes.
+   */
+  void print_matrices(std::ostream &os) const;
+
+private:
+
+  /**
+   * Sparsity patterns for transfer matrices.
+   */
+  std::vector<std_cxx11::shared_ptr<typename internal::MatrixSelector<VectorType>::Sparsity> > prolongation_sparsities;
+  std::vector<std_cxx11::shared_ptr<typename internal::MatrixSelector<VectorType>::Sparsity> > restriction_sparsities;
+
+  /**
+   * The actual prolongation matrix.  column indices belong to the dof indices
+   * of the mother cell, i.e. the coarse level.  while row indices belong to
+   * the child cell, i.e. the fine level.
+   */
+  std::vector<std_cxx11::shared_ptr<typename internal::MatrixSelector<VectorType>::Matrix> > prolongation_matrices;
+  std::vector<std_cxx11::shared_ptr<typename internal::MatrixSelector<VectorType>::Matrix> > restriction_matrices;
+
+  /**
+   * Degrees of freedom on the refinement edge excluding those on the
+   * boundary.
+   */
+  std::vector<std::vector<bool> > interface_dofs;
+};
 
 /*@}*/
 
