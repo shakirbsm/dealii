@@ -1918,14 +1918,12 @@ MappingQGeneric<dim,spacedim>::requires_update_flags (const UpdateFlags in) cons
                  | update_jacobian_pushed_forward_3rd_derivatives) )
         out |= update_covariant_transformation;
 
-      // The contravariant transformation
-      // used in the Piola transformation, which
-      // requires the determinant of the
-      // Jacobi matrix of the transformation.
-      // Because we have no way of knowing here whether the finite
-      // elements wants to use the contravariant of the Piola
-      // transforms, we add the JxW values to the list of flags to be
-      // updated for each cell.
+      // The contravariant transformation is used in the Piola
+      // transformation, which requires the determinant of the Jacobi
+      // matrix of the transformation.  Because we have no way of
+      // knowing here whether the finite element wants to use the
+      // contravariant or the Piola transforms, we add the JxW values
+      // to the list of flags to be updated for each cell.
       if (out & update_contravariant_transformation)
         out |= update_JxW_values;
 
@@ -3721,12 +3719,6 @@ add_quad_support_points(const Triangulation<3,3>::cell_iterator &cell,
   static const StraightBoundary<3> straight_boundary;
   // used if face quad at boundary or entirely in the interior of the domain
   std::vector<Point<3> > quad_points ((polynomial_degree-1)*(polynomial_degree-1));
-  // used if only one line of face quad is at boundary
-  std::vector<Point<3> > b(4*polynomial_degree);
-
-  // Used by the new Manifold interface. This vector collects the
-  // vertices used to compute the intermediate points.
-  std::vector<Point<3> > vertices(4);
 
   // loop over all faces and collect points on them
   for (unsigned int face_no=0; face_no<faces_per_cell; ++face_no)

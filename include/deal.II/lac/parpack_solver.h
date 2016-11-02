@@ -245,7 +245,7 @@ public:
                 const AdditionalData &data = AdditionalData());
 
   /**
-   * Initialise internal variables.
+   * Initialize internal variables.
    */
   void reinit(const IndexSet &locally_owned_dofs );
 
@@ -259,15 +259,21 @@ public:
               const std::vector<IndexSet> &partitioning);
 
   /**
+   * Initialize internal variables from the input @p distributed_vector.
+   */
+  void reinit(const VectorType &distributed_vector);
+
+  /**
    * Set initial vector for building Krylov space.
    */
   void set_initial_vector(const VectorType &vec);
 
   /**
-   * Set desired shift value. If this function is not called, the
-   * shift is assumed to be zero.
+   * Set shift @p sigma for shift-and-invert spectral transformation.
+   *
+   * If this function is not called, the shift is assumed to be zero.
    */
-  void set_shift(const double s );
+  void set_shift(const std::complex<double> sigma);
 
   /**
    * Solve the generalized eigensprectrum problem $A x=\lambda B x$ by calling
@@ -399,9 +405,14 @@ protected:
   std::vector< types::global_dof_index > local_indices;
 
   /**
-   * The shift value to be applied during solution
+   * Real part of the shift
    */
-  double shift_value;
+  double sigmar;
+
+  /**
+   * Imaginary part of the shift
+   */
+  double sigmai;
 
 private:
 
@@ -496,7 +507,20 @@ AdditionalData (const unsigned int     number_of_arnoldi_vectors,
   number_of_arnoldi_vectors(number_of_arnoldi_vectors),
   eigenvalue_of_interest(eigenvalue_of_interest),
   symmetric(symmetric)
-{}
+{
+  //Check for possible options for symmetric problems
+  if (symmetric)
+    {
+      Assert(eigenvalue_of_interest!=largest_real_part,
+             ExcMessage("'largest real part' can only be used for non-symmetric problems!"));
+      Assert(eigenvalue_of_interest!=smallest_real_part,
+             ExcMessage("'smallest real part' can only be used for non-symmetric problems!"));
+      Assert(eigenvalue_of_interest!=largest_imaginary_part,
+             ExcMessage("'largest imaginary part' can only be used for non-symmetric problems!"));
+      Assert(eigenvalue_of_interest!=smallest_imaginary_part,
+             ExcMessage("'smallest imaginary part' can only be used for non-symmetric problems!"));
+    }
+}
 
 template <typename VectorType>
 PArpackSolver<VectorType>::PArpackSolver (SolverControl        &control,
@@ -508,14 +532,15 @@ PArpackSolver<VectorType>::PArpackSolver (SolverControl        &control,
   mpi_communicator( mpi_communicator ),
   mpi_communicator_fortran ( MPI_Comm_c2f( mpi_communicator ) ),
   initial_vector_provided(false),
-  shift_value(0.0)
-
+  sigmar(0.0),
+  sigmai(0.0)
 {}
 
 template <typename VectorType>
-void PArpackSolver<VectorType>::set_shift(const double s )
+void PArpackSolver<VectorType>::set_shift(const std::complex<double> sigma)
 {
-  shift_value = s;
+  sigmar = sigma.real();
+  sigmai = sigma.imag();
 }
 
 template <typename VectorType>
@@ -581,8 +606,19 @@ void PArpackSolver<VectorType>::reinit(const IndexSet &locally_owned_dofs)
   src.reinit (locally_owned_dofs,mpi_communicator);
   dst.reinit (locally_owned_dofs,mpi_communicator);
   tmp.reinit (locally_owned_dofs,mpi_communicator);
-
 }
+
+template <typename VectorType>
+void PArpackSolver<VectorType>::reinit(const VectorType &distributed_vector)
+{
+  internal_reinit(distributed_vector.locally_owned_elements());
+
+  // deal.II vectors:
+  src.reinit (distributed_vector);
+  dst.reinit (distributed_vector);
+  tmp.reinit (distributed_vector);
+}
+
 
 template <typename VectorType>
 void PArpackSolver<VectorType>::reinit(const IndexSet &locally_owned_dofs,
@@ -594,7 +630,6 @@ void PArpackSolver<VectorType>::reinit(const IndexSet &locally_owned_dofs,
   src.reinit (partitioning,mpi_communicator);
   dst.reinit (partitioning,mpi_communicator);
   tmp.reinit (partitioning,mpi_communicator);
-
 }
 
 template <typename VectorType>
@@ -657,7 +692,6 @@ void PArpackSolver<VectorType>::solve
   // "LI" largest imaginary part
   // "SI" smallest imaginary part
   // "BE" both ends of spectrum simultaneous
-
   char which[3];
   switch (additional_data.eigenvalue_of_interest)
     {
@@ -879,9 +913,6 @@ void PArpackSolver<VectorType>::solve
 
       // which eigenvectors
       char howmany[4] = "All";
-
-      double sigmar = shift_value; // real part of the shift
-      double sigmai = 0.0; // imaginary part of the shift
 
       std::vector<double> eigenvalues_real (n_eigenvalues+1, 0.);
       std::vector<double> eigenvalues_im (n_eigenvalues+1, 0.);

@@ -16,6 +16,7 @@
 #include <deal.II/base/exceptions.h>
 #include <deal.II/base/logstream.h>
 #include <string>
+#include <cstring>
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -148,22 +149,39 @@ const char *ExceptionBase::get_exc_name () const
 
 void ExceptionBase::print_exc_data (std::ostream &out) const
 {
+  // print a header for the exception
   out << "An error occurred in line <" << line
       << "> of file <" << file
       << "> in function" << std::endl
       << "    " << function << std::endl
       << "The violated condition was: "<< std::endl
-      << "    " << cond << std::endl
-      << "The name and call sequence of the exception was:" << std::endl
-      << "    " << exc  << std::endl
-      << "Additional Information: " << std::endl;
+      << "    " << cond << std::endl;
+
+  // print the way the additional information message was generated.
+  // this is useful if the names of local variables appear in the
+  // generation of the error message, because it allows the identification
+  // of parts of the error text with what variables may have cause this
+  //
+  // On the other hand, this is almost never the case for ExcMessage
+  // exceptions which would simply print the same text twice: once for
+  // the way the message was composed, and once for the additional
+  // information. Furthermore, the former of these two is often spread
+  // between numerous "..."-enclosed strings that the preprocessor
+  // collates into a single string, making it awkward to read. Consequently,
+  // elide this text if the message was generated via an ExcMessage object
+  if (std::strstr(cond, "dealii::ExcMessage") != NULL)
+    out << "The name and call sequence of the exception was:" << std::endl
+        << "    " << exc  << std::endl;
+
+  // finally print the additional information the exception provides:
+  out << "Additional information: " << std::endl;
 }
 
 
 
 void ExceptionBase::print_info (std::ostream &out) const
 {
-  out << "(none)" << std::endl;
+  out << "    (none)" << std::endl;
 }
 
 

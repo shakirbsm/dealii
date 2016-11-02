@@ -66,7 +66,7 @@ inconvenience this causes.
  previous minimal version of 1.54. This is because 1.54 does not support
  serializing objects of type std::unique_ptr if C++11 is used, but we now
  use such objects in a variety of places in classes that can be serialized.
- BOOST 1.56, on the other hand, supports this. deal.II bundles BOOST 1.56
+ BOOST 1.56, on the other hand, supports this. deal.II bundles BOOST 1.62
  for cases where no or no sufficiently new version of BOOST is found on
  a system.
  <br>
@@ -215,6 +215,20 @@ inconvenience this causes.
 <h3>General</h3>
 
 <ol>
+ <li> Improved: The code in class GridReordering has been rewritten from
+ scratch. It now follows the algorithm described in the paper by
+ Agelek, Anderson, Bangerth and Barth mentioned in the documentation
+ of that class.
+ <br>
+ (Wolfgang Bangerth, 2016/10/28)
+ </li>
+
+ <li> Improved: deal.II now bundles a subset of BOOST 1.62 instead of a subset
+ of BOOST 1.56.
+ <br>
+ (David Wells, 2016/10/20)
+ </li>
+
  <li> New: Add a new FiniteElement class, FE_P1NC, to implement the scalar
  version of the P1 nonconforming finite element which is a piecewise linear
  element on quadrilaterals in 2d.
@@ -391,8 +405,88 @@ inconvenience this causes.
 <h3>Specific improvements</h3>
 
 <ol>
+ <li> New: Add PArpackSolver::reinit(const VectorType &distributed_vector) to
+ initialize internal data structures based on a vector. This makes PArpack
+ usable with MatrixFree operators.
+ <br>
+ (Denis Davydov, 2016/10/31)
+ </li>
+
+ <li> New: Add MatrixFreeOperators::LaplaceOperator representing a Laplace matrix.
+ <br>
+ (Denis Davydov, 2016/10/30)
+ </li>
+
+ <li> New: Add VectorTools::project() to do L2 projection
+ of scalar-valued quadrature point data in parallel.
+ <br>
+ (Denis Davydov, 2016/10/28)
+ <li>
+
+ <li> Fixed: Increased precision of timesteps in DataOutInterface::write_pvd_record().
+ <br>
+ (Rajat Arora, 2016/10/29)
+ </li>
+ 
+<li> New: Add MatrixFreeOperators::MassOperator representing a mass matrix.
+ <br>
+ (Daniel Arndt, 2016/10/27)
+ </li>
+
+ <li> New: There is a new class DiagonalMatrix which represents a diagonal
+ matrix via a vector. This is useful for representing Jacobi preconditioners
+ with matrix-free methods.
+ <br>
+ (Martin Kronbichler, 2016/10/27)
+ </li>
+
+ <li> New: The class PreconditionChebyshev now offers a third template
+ parameter PreconditionerType that is passed to the preconditioner setup via
+ AdditionalData::preconditioner. This allows using other preconditioners than
+ the default (and previous) selection of a point-Jacobi preconditioner.
+ <br>
+ (Martin Kronbichler, 2016/10/27)
+ </li>
+
+ <li> New: Add ArpackSolver::set_shift() to set the shift value in spectral
+ transformation.
+ <br>
+ (Denis Davydov, 2016/10/25)
+ </li>
+
+ <li> New: PreconditionChebyshev now offers a PreconditionChebyshev::step()
+ and PreconditionChebyshev::Tstep() methods for usage in relaxation smoothers.
+ <br>
+ (Martin Kronbichler, 2016/10/21)
+ </li>
+
+ <li> Fixed: GridIn::read_vtk() accidentally only read material ids of
+ input cells correctly if the file listed them as integers. If they were
+ listed them as floating point numbers, then unpredictable numbers were used.
+ <br>
+ (Wolfgang Bangerth, 2016/10/20)
+ </li>
+
+ <li> New: Add a base class for matrix-free operators MatrixFreeOperators::Base.
+ <br>
+ (Denis Davydov, 2016/10/16)
+ </li>
+
+ <li> New: There is now a function FEEvaluation::JxW() to return the Jacobian
+ determinant times the quadrature weight in the matrix-free evaluation
+ routines similary to FEValues.
+ <br>
+ (Martin Kronbichler, 2016/10/14)
+ </li>
+
+ <li> Fixed: GridGenerator::hyper_cube_slit() with colorized set to
+ true is now working correctly.
+ <br>
+ (Timo Heister, 2016/10/04)
+ </li>
+
  <li> Fixed: SphericalManifold now behaves correctly also when R>>1
- and the center is not the origin. 
+ and the center is not the origin.
  <br>
  (Luca Heltai, 2016/10/01)
  </li>
@@ -424,7 +518,7 @@ inconvenience this causes.
 
  <li> Fixed: EmbeddedRungeKutta methods now correctly increase delta_t_guess
  when the error is below coarsen_tol.
- </br>
+ <br>
  (Vaibhav Palkar, Bruno Turcksin, 2016/09/16)
  </li>
 

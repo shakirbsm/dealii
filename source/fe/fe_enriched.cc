@@ -12,8 +12,11 @@
 // the top level of the deal.II distribution.
 //
 // ---------------------------------------------------------------------
+
+
 #include <deal.II/fe/fe_enriched.h>
-#ifdef DEAL_II_WITH_CXX11
+
+#ifdef DEAL_II_WITH_CXX14
 
 #include <deal.II/fe/fe_tools.h>
 
@@ -126,17 +129,19 @@ FE_Enriched<dim,spacedim>::FE_Enriched (const FiniteElement<dim,spacedim> &fe_ba
                                         const Function<spacedim>      *enrichment_function)
   :
   FE_Enriched<dim,spacedim>
-  (&fe_base, { &fe_enriched },
+  (&fe_base,
+   std::vector<const FiniteElement<dim,spacedim>*>(1, &fe_enriched),
+   std::vector<std::vector<std::function<const Function<spacedim> *(const typename Triangulation<dim, spacedim>::cell_iterator &) > > >
+   (1,
+    std::vector<std::function<const Function<spacedim> *(const typename Triangulation<dim, spacedim>::cell_iterator &) > >
+    (1,
+     [=] (const typename Triangulation<dim, spacedim>::cell_iterator &) -> const Function<spacedim> *
 {
-  {
-    [=] (const typename Triangulation<dim, spacedim>::cell_iterator &) -> const Function<spacedim> *
-    {
-      return enrichment_function;
-    }
-  }
+  return enrichment_function;
 })
-{
-}
+ )
+)
+{}
 
 
 template <int dim, int spacedim>
@@ -147,8 +152,7 @@ FE_Enriched<dim,spacedim>::FE_Enriched (const FiniteElement<dim,spacedim> *fe_ba
   FE_Enriched<dim,spacedim> (build_fes(fe_base,fe_enriched),
                              build_multiplicities(functions),
                              functions)
-{
-}
+{}
 
 
 template <int dim, int spacedim>
@@ -188,12 +192,10 @@ FE_Enriched<dim,spacedim>::FE_Enriched (const std::vector< const FiniteElement< 
         continue;
 
       const unsigned int base_m  = this->system_to_base_table[system_index].first.second;
-      const unsigned int
-      base_index = this->system_to_base_table[system_index].second;
 
       Assert (base_m < base_no_mult_local_enriched_dofs[base_no].size(),
               ExcMessage("Size mismatch for base_no_mult_local_enriched_dofs: "
-                         "base_index = " + std::to_string(base_index) +
+                         "base_index = " + std::to_string(this->system_to_base_table[system_index].second) +
                          "; base_no = " + std::to_string(base_no) +
                          "; base_m = " + std::to_string(base_m) +
                          "; system_index = " + std::to_string(system_index)));
@@ -923,4 +925,4 @@ InternalData::get_fe_output_object (const unsigned int base_no) const
 
 DEAL_II_NAMESPACE_CLOSE
 
-#endif // CXX11
+#endif // CXX14
