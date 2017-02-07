@@ -117,7 +117,43 @@ namespace LocalIntegrators
         }
     }
 
+    template<int dim>
+    void cell_matrix_sksym (
+      FullMatrix<double> &M,
+      const FEValuesBase<dim> &fe,
+      const FEValuesBase<dim> &fetest,
+      const VectorSlice<const std::vector<std::vector<Tensor<1,dim> > > > &dvel,
+      const double factor = 0.5)
+    {
+      const unsigned int n_dofs = fe.dofs_per_cell;
+      const unsigned int t_dofs = fetest.dofs_per_cell;
+      const unsigned int n_components = fe.get_fe().n_components();
 
+      AssertVectorVectorDimension(dvel, n_components, fe.n_quadrature_points);
+      // If the size of the
+      // velocity vectors is one,
+      // then do not increment
+      // between quadrature points.
+      AssertDimension(M.n(), n_dofs);
+      AssertDimension(M.m(), t_dofs);
+
+      for (unsigned k=0; k<fe.n_quadrature_points; ++k)
+        {
+          const double dx = factor * fe.JxW(k);
+
+          for (unsigned j=0; j<n_dofs; ++j)
+            for (unsigned i=0; i<t_dofs; ++i)
+              for (unsigned int c=0; c<n_components; ++c)
+                {
+                  double dvelu = dvel[c][k][0]
+                                  * fe.shape_value_component(i,k,c);
+                  for (unsigned int d=1; d<dim; ++d)
+                    dvelu += dvel[c][k][d]
+                              * fe.shape_value_component(i,k,c);
+                  M(i,j) -= dx * dvelu * fe.shape_value_component(j,k,c);
+                }
+        }
+    }
 
     /**
      * Scalar advection residual operator in strong form
@@ -282,6 +318,33 @@ namespace LocalIntegrators
               for (unsigned int d=0; d<dim; ++d)
                 result(i) -= dx * input[c][k]
                              * fe.shape_grad_component(i,k,c)[d] * velocity[d][k * v_increment];
+        }
+    }
+
+    template <int dim>
+    inline void
+    cell_residual_sksym  (
+      Vector<double> &result,
+      const FEValuesBase<dim> &fe,
+      const VectorSlice<const std::vector<std::vector<double> > > &input,
+      const VectorSlice<const std::vector<std::vector<Tensor<1,dim> > > > &dvel,
+      double factor = 0.5)
+    {
+      const unsigned int nq = fe.n_quadrature_points;
+      const unsigned int n_dofs = fe.dofs_per_cell;
+      const unsigned int n_comp = fe.get_fe().n_components();
+
+      AssertVectorVectorDimension(input, n_comp, fe.n_quadrature_points);
+      Assert(result.size() == n_dofs, ExcDimensionMismatch(result.size(), n_dofs));
+
+      for (unsigned k=0; k<nq; ++k)
+        {
+          const double dx = factor * fe.JxW(k);
+          for (unsigned i=0; i<n_dofs; ++i)
+            for (unsigned int c=0; c<n_comp; ++c)
+              for (unsigned int d=0; d<dim; ++d)
+                result(i) -= dx * input[c][k]
+                             * fe.shape_value_component(i,k,c) * dvel[c][k][d];
         }
     }
 
